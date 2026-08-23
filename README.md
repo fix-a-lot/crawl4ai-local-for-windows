@@ -38,7 +38,7 @@ uv run mcp dev src/crawl4ai_local_for_windows/server.py
 claude mcp add --transport stdio --scope user crawl4ai -- uv run --directory <parent_location>\crawl4ai-local-for-windows main
 ```
 
-- parent_location: Write it like `C:\dev\repo\fix-a-lot`
+parent_location: Write it like `C:\dev\repo\fix-a-lot`
 - e.g. `claude mcp add --transport stdio --scope user crawl4ai -- uv run --directory C:\dev\repo\fix-a-lot\crawl4ai-local-for-windows main`
 
 ```bash
@@ -65,7 +65,7 @@ claude mcp get crawl4ai
 }
 ```
 
-- parent_location: Write it like `C:\\dev\\repo\\fix-a-lot`
+parent_location: Write it like `C:\\dev\\repo\\fix-a-lot`
 - e.g. `C:\\dev\\repo\\fix-a-lot\\crawl4ai-local-for-windows`
 
 ---
