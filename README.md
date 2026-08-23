@@ -20,8 +20,6 @@ uv sync
 
 🚨️ If you connect the MCP correctly to a coding agent, it starts the server automatically—no need to run it separately.
 
-Run the `run-mcp-server.bat` file, or execute the following command in the terminal:
-
 ```bash
 uv run main
 ```
