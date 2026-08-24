@@ -3,8 +3,9 @@
 Local MCP server for Crawl4ai on Windows. No need to install WSL—just run it directly.
 
 See also:
-    - [https://github.com/unclecode/crawl4ai](https://github.com/unclecode/crawl4ai)
-    - [https://docs.crawl4ai.com/](https://docs.crawl4ai.com/)
+
+- [https://github.com/unclecode/crawl4ai](https://github.com/unclecode/crawl4ai)
+- [https://docs.crawl4ai.com/](https://docs.crawl4ai.com/)
 
 ## Requirements
 
@@ -18,11 +19,14 @@ uv sync
 
 ## Running
 
-🚨️ If you connect the MCP correctly to a coding agent, it starts the server automatically—no need to run it separately.
+🚨 This server operates as a stdio server, so there is no need to keep it running like a network server. The agent will automatically instantiate the server instance.
 
 ```bash
+# Terminate after verifying the welcome message
 uv run main
 ```
+
+✅ Once the welcome message has been verified, the agent can connect to the MCP.
 
 To run in debugging mode (MCP Inspector) from the terminal:
 
@@ -38,7 +42,7 @@ uv run mcp dev src/crawl4ai_local_for_windows/server.py
 claude mcp add --transport stdio --scope user crawl4ai -- uv run --directory <parent_location>\crawl4ai-local-for-windows main
 ```
 
-parent_location: Write it like `C:\dev\repo\fix-a-lot`
+- parent_location: Write it like `C:\dev\repo\fix-a-lot`
 - e.g. `claude mcp add --transport stdio --scope user crawl4ai -- uv run --directory C:\dev\repo\fix-a-lot\crawl4ai-local-for-windows main`
 
 ```bash
@@ -65,5 +69,5 @@ claude mcp get crawl4ai
 }
 ```
 
-parent_location: Write it like `C:\\dev\\repo\\fix-a-lot`
+- parent_location: Write it like `C:\\dev\\repo\\fix-a-lot`
 - e.g. `C:\\dev\\repo\\fix-a-lot\\crawl4ai-local-for-windows`
