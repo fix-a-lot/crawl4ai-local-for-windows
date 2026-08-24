@@ -67,13 +67,3 @@ claude mcp get crawl4ai
 
 parent_location: Write it like `C:\\dev\\repo\\fix-a-lot`
 - e.g. `C:\\dev\\repo\\fix-a-lot\\crawl4ai-local-for-windows`
-
----
-
-## 🚧 Commands used when scaffolding the project
-
-```bash
-uv init
-uv add crawl4ai mcp
-uv run crawl4ai-setup
-```
