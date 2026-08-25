@@ -12,12 +12,12 @@ logger = logging.getLogger("crawl4ai-mcp")
 
 mcp = MCPServer("crawl4ai")
 
-# 브라우저를 매 호출마다 새로 띄우면 비용이 크므로, 프로세스 안에서 하나만 만들어 재사용한다.
 _crawler: AsyncWebCrawler | None = None
 _crawler_lock = asyncio.Lock()
 
-# 재사용 중인 브라우저가 죽었을 때(좀비 프로세스, 대상 페이지 붕괴 등) 한 번만 새로
-# 띄워본다. 예방적 N회 갱신은 crawl4ai 내부(_pages_served / 브라우저 버전 bump)가 담당.
+# 초기 시도 1회 + 재생성 재시도 횟수. 메시지 기반 붕괴/예외 기반 붕괴 둘 다
+# 이 횟수만큼 균등하게 재시도한다 (이전 버전은 예외 경로만 루프를 돌고
+# 메시지 경로는 1회로 끝나는 비대칭이 있었음).
 _MAX_RECREATE_ATTEMPTS = 2
 
 
@@ -48,13 +48,37 @@ async def reset_crawler() -> None:
             logger.exception("크롤러 종료 중 예외 (무시하고 재생성)")
 
 
+def _looks_like_browser_crash(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    # 대상 사이트 쪽 문제(네트워크 오류, 안티봇 차단, 타임아웃 등)와 겹치지
+    # 않도록 브라우저/세션 자체가 죽었을 때만 나오는 문구로 좁힘.
+    keywords = (
+        "target page, context or browser has been closed",
+        "target closed",
+        "browser has been closed",
+        "browser has crashed",
+        "browsertype.launch",
+    )
+    return any(k in msg for k in keywords)
+
+
+def _looks_like_browser_crash_message(error_message: str) -> bool:
+    msg = (error_message or "").lower()
+    keywords = (
+        "target page, context or browser has been closed",
+        "target closed",
+        "browser has been closed",
+        "browser has crashed",
+    )
+    return any(k in msg for k in keywords)
+
+
 async def run_with_recovery(url: str, config: CrawlerRunConfig):
     """arun을 실행하고, 브라우저 자체 붕괴로 보이면 재생성 후 재시도한다.
 
     예외로 튀는 경우와 result.success=False로 조용히 돌아오는 경우를
     매 시도마다 동일하게 검사한다 (이전 버전은 재시도 루프에서 메시지
     기반 붕괴를 다시 검사하지 않아 사실상 1회만 재시도되는 비대칭이 있었음).
-    네트워크 오류·안티봇 차단 등 페이지 쪽 원인은 재시도하지 않는다.
     """
     last_result = None
     last_exc: Exception | None = None
@@ -87,35 +111,6 @@ async def run_with_recovery(url: str, config: CrawlerRunConfig):
     if last_exc is not None:
         raise last_exc
     return last_result  # 재시도 소진 — 마지막 실패 결과를 그대로 반환해 호출부가 처리
-
-
-def _looks_like_browser_crash(exc: Exception) -> bool:
-    msg = str(exc).lower()
-    # 대상 사이트 쪽 문제(네트워크 오류, 안티봇 차단, 타임아웃 등)와 겹치지
-    # 않도록 브라우저/세션 자체가 죽었을 때만 나오는 문구로 좁힘.
-    keywords = (
-        "target page, context or browser has been closed",
-        "target closed",
-        "browser has been closed",
-        "browser has crashed",
-        "browsertype.launch",
-    )
-    return any(k in msg for k in keywords)
-
-
-def _looks_like_browser_crash_message(error_message: str) -> bool:
-    msg = (error_message or "").lower()
-    keywords = (
-        "target page, context or browser has been closed",
-        "target closed",
-        "browser has been closed",
-        "browser has crashed",
-    )
-    return any(k in msg for k in keywords)
-
-
-async def shutdown_crawler() -> None:
-    await reset_crawler()
 
 
 def _build_config(wait_seconds: float, wait_selector: str, **extra) -> CrawlerRunConfig:
@@ -239,6 +234,10 @@ async def crawl_screenshot(url: str, output_path: str) -> str:
         return f"파일 저장 실패: {exc}"
 
     return f"저장 완료: {output_path}"
+
+
+async def shutdown_crawler() -> None:
+    await reset_crawler()
 
 
 def main() -> None:
