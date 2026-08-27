@@ -1,6 +1,6 @@
 # Crawl4ai Local for Windows
 
-[🇰🇷 한국어](README.ko.md) | [English](README.md)
+[한국어](README.ko.md) | [English](README.md)
 
 Local MCP server for Crawl4ai on Windows. Runs directly on Windows without WSL.
 
