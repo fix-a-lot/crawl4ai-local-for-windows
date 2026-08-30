@@ -90,11 +90,11 @@ crawl_structured(
 
 Field spec syntax:
 
-| Spec | Meaning |
-| --- | --- |
-| `"td"` or `"td:text"` | Text of the matched element |
-| `"a@href"` | Attribute of a child element (`element@attribute`) |
-| `"@data-value"` | Attribute of the base element itself |
+| Spec                  | Meaning                                                       |
+| --------------------- | ------------------------------------------------------------- |
+| `"td"` or `"td:text"` | Text of the matched element                                   |
+| `"a@href"`            | Attribute of a child element (`element@attribute`)            |
+| `"@data-value"`       | Attribute of the base element itself                          |
 | `"td:nth-of-type(1)"` | Nth element — use standard CSS (`:eq()` is **not** supported) |
 
 Both tools share the waiting options (see below).
@@ -130,11 +130,11 @@ crawl_markdown(url="https://example.com", wait_selector="div.result-list")
 
 Comparison of 3 cases on a local test page that updates content via JS after 3 seconds:
 
-| Case | success | Captures Dynamic Content |
-| --- | --- | --- |
-| No waiting option | True | ❌ Returns only "Loading..." |
-| `wait_seconds=5` | True | ✅ Accurately captures final content |
-| `wait_selector="#dynamic"` | True | ❌ Passes immediately if the element already exists in the initial HTML |
+| Case                       | success | Captures Dynamic Content                                                |
+| -------------------------- | ------- | ----------------------------------------------------------------------- |
+| No waiting option          | True    | ❌ Returns only "Loading..."                                            |
+| `wait_seconds=5`           | True    | ✅ Accurately captures final content                                    |
+| `wait_selector="#dynamic"` | True    | ❌ Passes immediately if the element already exists in the initial HTML |
 
 ### Findings / Cautions
 
