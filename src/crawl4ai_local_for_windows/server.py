@@ -1,6 +1,8 @@
 import asyncio
 import base64
+import binascii
 import logging
+import ntpath
 import os
 
 from mcp.server import MCPServer
@@ -11,6 +13,51 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("crawl4ai-mcp")
 
 mcp = MCPServer("crawl4ai")
+
+# --- output_path 안전장치 (Windows 시스템 경로 쓰기 차단) ---------------------
+#
+# 에이전트가 실수로(또는 프롬프트 인젝션 등으로) 스크린샷 저장 경로를
+# 시스템 디렉터리로 넘길 가능성을 막는다. 화이트리스트가 아니라
+# 블랙리스트 방식 — 알려진 시스템 경로 몇 곳만 차단하고 나머지는 허용한다.
+# 완전한 샌드박싱이 아니라 "실수 방지" 수준의 가드레일이다.
+_WINDOWS_SYSTEM_ROOTS = (
+    r"c:\windows",
+    r"c:\program files",
+    r"c:\program files (x86)",
+    r"c:\programdata",
+    r"c:\system volume information",
+    r"c:\$recycle.bin",
+    r"c:\users\all users",
+    r"c:\users\default",
+)
+
+
+def _is_blocked_system_path(path: str) -> bool:
+    """path가 알려진 Windows 시스템 경로 하위인지 확인한다.
+
+    이 서버는 Windows 전용(WSL 없이 동작)이지만 개발 시엔 다른 OS에서도
+    문법 검사가 이뤄질 수 있으므로, ntpath 기반 문자열 정규화만으로
+    판단한다 (os.path.realpath는 실행 플랫폼에 따라 Windows 드라이브
+    표기를 그대로 리터럴로 취급해 비교가 깨질 수 있음).
+
+    - ntpath.normpath로 ".."/혼합 구분자(\\, /)를 정규화해 우회를 막는다.
+    - Windows 경로는 대소문자를 구분하지 않으므로 소문자로 비교한다.
+    - 정규화된 경로가 시스템 루트와 "정확히 같거나" 그 하위 디렉터리일
+      때만 차단한다 (단순 prefix 매칭은 "C:\\Windows2\\x.png" 같은 걸
+      "C:\\Windows"의 하위로 오판할 수 있어 구분자 경계까지 확인한다).
+    """
+    if not path:
+        return True
+
+    normalized = ntpath.normpath(path).lower()
+
+    for root in _WINDOWS_SYSTEM_ROOTS:
+        root_normalized = ntpath.normpath(root).lower()
+        if normalized == root_normalized or normalized.startswith(
+            root_normalized + ntpath.sep
+        ):
+            return True
+    return False
 
 # 브라우저를 매 호출마다 새로 띄우면 비용이 크므로, 프로세스 안에서 하나만 만들어 재사용한다.
 _crawler: AsyncWebCrawler | None = None
@@ -55,31 +102,47 @@ async def run_with_recovery(url: str, config: CrawlerRunConfig):
     매 시도마다 동일하게 검사한다 (이전 버전은 재시도 루프에서 메시지
     기반 붕괴를 다시 검사하지 않아 사실상 1회만 재시도되는 비대칭이 있었음).
     네트워크 오류·안티봇 차단 등 페이지 쪽 원인은 재시도하지 않는다.
+
+    마지막 시도가 실패한 경우, 그 결과/예외를 그대로 호출부에 돌려주되
+    reset_crawler()는 다시 호출하지 않는다 — 이미 죽은 크롤러를 정리하는
+    것은 직전 루프에서 끝났으므로, 여기서 한 번 더 리셋하면 그 사이 다른
+    요청이 새로 만든 정상 인스턴스를 괜히 파괴할 수 있다.
     """
     last_result = None
     last_exc: Exception | None = None
 
     for attempt in range(1, _MAX_RECREATE_ATTEMPTS + 1):
         crawler = await get_crawler()
+        is_last_attempt = attempt == _MAX_RECREATE_ATTEMPTS
+
         try:
             result = await crawler.arun(url=url, config=config)
         except Exception as exc:
-            logger.exception("arun 예외 (시도 %d/%d): %s", attempt, _MAX_RECREATE_ATTEMPTS, url)
+            logger.exception(
+                "arun 예외 (시도 %d/%d): %s", attempt, _MAX_RECREATE_ATTEMPTS, url
+            )
             if not _looks_like_browser_crash(exc):
                 raise
             last_exc = exc
             last_result = None
-            await reset_crawler()
+            if not is_last_attempt:
+                await reset_crawler()
             continue
 
-        if not result.success and _looks_like_browser_crash_message(result.error_message or ""):
+        if not result.success and _looks_like_browser_crash_message(
+            result.error_message or ""
+        ):
             logger.warning(
                 "브라우저 붕괴 의심 (시도 %d/%d, %s): %s",
-                attempt, _MAX_RECREATE_ATTEMPTS, url, result.error_message,
+                attempt,
+                _MAX_RECREATE_ATTEMPTS,
+                url,
+                result.error_message,
             )
             last_result = result
             last_exc = None
-            await reset_crawler()
+            if not is_last_attempt:
+                await reset_crawler()
             continue
 
         return result
@@ -127,6 +190,33 @@ def _build_config(wait_seconds: float, wait_selector: str, **extra) -> CrawlerRu
     return CrawlerRunConfig(**kwargs)
 
 
+def _parse_field_spec(spec: str) -> dict:
+    """필드 스펙 문자열을 JsonCssExtractionStrategy용 필드 딕셔너리로 변환한다.
+
+    - "a@href" -> 속성 추출 (요소@속성명)
+    - "@data-value" -> 베이스 요소 자체의 속성
+    - "td:text" -> 텍스트 추출, 끝의 ":text" 접미사만 제거
+    - "td" -> 텍스트 추출 (접미사 없음)
+
+    ":text"는 접미사로만 취급한다. 과거 구현은 spec.replace(":text", "")로
+    문자열 어디에 있든 제거했기 때문에, selector 자체에 "text"라는 부분
+    문자열이 포함된 클래스명(예: ".text-bold:text")이 있으면 의도치 않게
+    깨졌다.
+    """
+    if "@" in spec:
+        sel, attr = spec.rsplit("@", 1)
+        field = {"name": "", "type": "attribute", "attribute": attr}
+        if sel:
+            field["selector"] = sel
+        return field
+
+    if spec.endswith(":text"):
+        selector = spec[: -len(":text")]
+    else:
+        selector = spec
+    return {"name": "", "type": "text", "selector": selector}
+
+
 @mcp.tool()
 async def crawl_markdown(
     url: str,
@@ -149,6 +239,7 @@ async def crawl_markdown(
 
     if not result.success:
         return f"크롤링 실패: {result.error_message}"
+
     return result.markdown
 
 
@@ -156,7 +247,7 @@ async def crawl_markdown(
 async def crawl_structured(
     url: str,
     selector: str,
-    fields: dict,
+    fields: dict[str, str],
     wait_seconds: float = 0,
     wait_selector: str = "",
 ) -> str:
@@ -175,16 +266,10 @@ async def crawl_structured(
     """
     schema_fields = []
     for name, spec in fields.items():
-        if "@" in spec:
-            sel, attr = spec.rsplit("@", 1)
-            field = {"name": name, "type": "attribute", "attribute": attr}
-            if sel:
-                field["selector"] = sel
-        elif ":text" in spec:
-            field = {"name": name, "type": "text", "selector": spec.replace(":text", "")}
-        else:
-            field = {"name": name, "type": "text", "selector": spec}
+        field = _parse_field_spec(spec)
+        field["name"] = name
         schema_fields.append(field)
+
     schema = {
         "name": "extraction",
         "baseSelector": selector,
@@ -204,15 +289,20 @@ async def crawl_structured(
 
     if not result.success:
         return f"크롤링 실패: {result.error_message}"
+
     content = result.extracted_content
     if not content:
         return "추출 결과 없음 — selector가 페이지에 매칭되는지 확인하세요."
+
     return content
 
 
 @mcp.tool()
 async def crawl_screenshot(url: str, output_path: str) -> str:
     """스크린샷을 찍어 파일로 저장한다."""
+    if _is_blocked_system_path(output_path):
+        return f"저장 거부: 시스템 경로에는 저장할 수 없습니다: {output_path}"
+
     try:
         result = await run_with_recovery(
             url,
@@ -224,8 +314,15 @@ async def crawl_screenshot(url: str, output_path: str) -> str:
 
     if not result.success:
         return f"크롤링 실패: {result.error_message}"
+
     if not result.screenshot:
         return "스크린샷 실패: 크롤링은 성공했지만 이미지가 반환되지 않음"
+
+    try:
+        image_bytes = base64.b64decode(result.screenshot)
+    except (binascii.Error, ValueError) as exc:
+        logger.exception("스크린샷 디코딩 실패: %s", url)
+        return f"스크린샷 디코딩 실패: {exc}"
 
     output_dir = os.path.dirname(output_path)
     if output_dir:
@@ -233,7 +330,7 @@ async def crawl_screenshot(url: str, output_path: str) -> str:
 
     try:
         with open(output_path, "wb") as f:
-            f.write(base64.b64decode(result.screenshot))
+            f.write(image_bytes)
     except OSError as exc:
         logger.exception("스크린샷 저장 실패: %s", output_path)
         return f"파일 저장 실패: {exc}"

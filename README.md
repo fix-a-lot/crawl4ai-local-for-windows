@@ -1,6 +1,6 @@
 # Crawl4ai Local for Windows
 
-[한국어](README.ko.md) | [English](README.md)
+[한국어](./README.ko.md) | [English](./README.md)
 
 Local MCP server for Crawl4ai on Windows. Runs directly on Windows without WSL.
 
@@ -8,8 +8,8 @@ Local MCP server for Crawl4ai on Windows. Runs directly on Windows without WSL.
 
 See also:
 
-- [https://github.com/unclecode/crawl4ai](https://github.com/unclecode/crawl4ai)
-- [https://docs.crawl4ai.com/](https://docs.crawl4ai.com/)
+- <https://github.com/unclecode/crawl4ai>
+- <https://docs.crawl4ai.com/>
 
 ## Requirements
 
@@ -18,7 +18,7 @@ See also:
 
 ## Installation
 
-```bash
+```
 uv sync
 ```
 
@@ -26,14 +26,14 @@ uv sync
 
 🚨 This server is a stdio server — no need to keep it running like a network server. When connected to an agent as MCP, the agent automatically spins up the server instance.
 
-```bash
+```
 # Check for the "🚀 Crawl4ai MCP server started." message, then exit
 uv run main
 ```
 
-✅ After confirming the welcome message, press <kbd>Ctrl+C</kbd> to exit, then add the MCP to your agent.
+✅ After confirming the welcome message, press `Ctrl+C` to exit, then add the MCP to your agent.
 
-```bash
+```
 # Tip: debugging mode (MCP Inspector)
 uv run mcp dev src/crawl4ai_local_for_windows/server.py
 ```
@@ -42,14 +42,14 @@ uv run mcp dev src/crawl4ai_local_for_windows/server.py
 
 ### Claude Code
 
-```bash
+```
 claude mcp add --transport stdio --scope user crawl4ai -- uv run --directory <parent_location>/crawl4ai-local-for-windows main
 ```
 
 - `parent_location`: Write it like `C:/dev/hermes-workspace`
 - e.g. `claude mcp add --transport stdio --scope user crawl4ai -- uv run --directory C:/dev/hermes-workspace/crawl4ai-local-for-windows main`
 
-```bash
+```
 # Check MCP installation
 claude mcp list
 claude mcp get crawl4ai
@@ -57,14 +57,14 @@ claude mcp get crawl4ai
 
 ### Hermes Agent
 
-```bash
+```
 hermes mcp add crawl4ai --command "uv" --args "run" "--directory" "<parent_location>/crawl4ai-local-for-windows" "main"
 ```
 
 - `parent_location`: Write it like `C:/dev/hermes-workspace`
 - e.g. `C:/dev/hermes-workspace/crawl4ai-local-for-windows`
 
-```bash
+```
 # Check MCP installation
 hermes mcp list
 ```
@@ -79,7 +79,7 @@ Crawl a URL and return the content as Markdown.
 
 Extract repeated elements as JSON using CSS selectors.
 
-```python
+```
 crawl_structured(
     url="https://books.toscrape.com/",
     selector="article.product_pod",
@@ -103,6 +103,8 @@ Both tools share the waiting options (see below).
 
 Capture a full-page screenshot and save it to a file. Parent directories are created automatically.
 
+🛡️ **`output_path` is checked against a blocklist of known Windows system directories** (`C:\Windows`, `C:\Program Files`, `C:\Program Files (x86)`, `C:\ProgramData`, `C:\System Volume Information`, `C:\$Recycle.Bin`, `C:\Users\All Users`, `C:\Users\Default`) before the crawl even runs. A path that resolves into one of these (including via `..` traversal) is rejected with an error message, so an agent can't accidentally overwrite system files. This is a blocklist, not a full sandbox — it guards against mistakes, not a determined attacker.
+
 ## Browser Reuse & Crash Recovery
 
 Instead of launching Chromium on every call (which is expensive), the server keeps one browser instance for the process lifetime. If the shared browser crashes mid-session, the server detects it and recovers automatically:
@@ -110,6 +112,7 @@ Instead of launching Chromium on every call (which is expensive), the server kee
 - Crash detection matches Playwright collapse signatures only — `Target page, context or browser has been closed`, `browser has crashed`, `browsertype.launch` failures, etc. Network errors, anti-bot blocks, and timeouts are **page-side causes** and are never retried with a fresh browser.
 - On crash: dispose the dead instance → launch a new one → retry, up to `_MAX_RECREATE_ATTEMPTS = 2` attempts.
 - Both failure paths are checked equally on every attempt: exceptions raised by `arun()` **and** `result.success=False` + crash message in `error_message`.
+- On the last attempt, a crash is still reported as a failure, but the crawler is **not** reset again — that cleanup already happened on the prior attempt, and resetting a second time could tear down an instance a concurrent request just recreated.
 - Preventive recycling (e.g., refresh every N pages) is intentionally left to Crawl4ai's built-in browser recycling; the server only reacts to actual collapses.
 
 Concurrency note: multiple simultaneous `arun()` calls on the shared crawler are safe — Crawl4ai serializes page creation internally (`_page_lock`, GH-1198 fix) and manages context lifecycle with refcounting + LRU. Verified with concurrent multi-site smoke tests.
@@ -118,7 +121,7 @@ Concurrency note: multiple simultaneous `arun()` calls on the shared crawler are
 
 For dynamic pages that render content late using JS, use the waiting options of `crawl_markdown` / `crawl_structured`.
 
-```python
+```
 # Method 1: Wait for a fixed duration (seconds)
 crawl_markdown(url="https://example.com", wait_seconds=5)
 
@@ -130,8 +133,8 @@ crawl_markdown(url="https://example.com", wait_selector="div.result-list")
 
 Comparison of 3 cases on a local test page that updates content via JS after 3 seconds:
 
-| Case                       | success | Captures Dynamic Content                                                |
-| -------------------------- | ------- | ----------------------------------------------------------------------- |
+| Case                       | success | Captures Dynamic Content                                               |
+| -------------------------- | ------- | ------------------------------------------------------------------------ |
 | No waiting option          | True    | ❌ Returns only "Loading..."                                            |
 | `wait_seconds=5`           | True    | ✅ Accurately captures final content                                    |
 | `wait_selector="#dynamic"` | True    | ❌ Passes immediately if the element already exists in the initial HTML |
