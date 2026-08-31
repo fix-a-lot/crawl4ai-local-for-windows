@@ -90,12 +90,12 @@ crawl_structured(
 
 Field spec syntax:
 
-| Spec                  | Meaning                                                       |
-| --------------------- | ------------------------------------------------------------- |
-| `"td"` or `"td:text"` | Text of the matched element                                   |
-| `"a@href"`            | Attribute of a child element (`element@attribute`)            |
-| `"@data-value"`       | Attribute of the base element itself                          |
-| `"td:nth-of-type(1)"` | Nth element — use standard CSS (`:eq()` is **not** supported) |
+|| Spec                  | Meaning                                                      |
+|| --------------------- | ------------------------------------------------------------ |
+|| `"td"` or `"td:text"` | Text of the matched element                                  |
+|| `"a@href"`            | Attribute of a child element (`element@attribute`)           |
+|| `"@data-value"`       | Attribute of the base element itself                         |
+|| `"td:nth-of-type(1)"` | Nth element — use standard CSS (`:eq()` is **not** supported) |
 
 Both tools share the waiting options (see below).
 
