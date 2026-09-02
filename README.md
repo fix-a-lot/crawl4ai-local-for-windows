@@ -46,8 +46,8 @@ uv run mcp dev src/crawl4ai_local_for_windows/server.py
 claude mcp add --transport stdio --scope user crawl4ai -- uv run --directory <parent_location>/crawl4ai-local-for-windows main
 ```
 
-- `parent_location`: Write it like `C:/dev/hermes-workspace`
-- e.g. `claude mcp add --transport stdio --scope user crawl4ai -- uv run --directory C:/dev/hermes-workspace/crawl4ai-local-for-windows main`
+- `parent_location`: Write it like `C:/dev/repo`
+- e.g. `claude mcp add --transport stdio --scope user crawl4ai -- uv run --directory C:/dev/repo/crawl4ai-local-for-windows main`
 
 ```
 # Check MCP installation
@@ -61,8 +61,8 @@ claude mcp get crawl4ai
 hermes mcp add crawl4ai --command "uv" --args "run" "--directory" "<parent_location>/crawl4ai-local-for-windows" "main"
 ```
 
-- `parent_location`: Write it like `C:/dev/hermes-workspace`
-- e.g. `C:/dev/hermes-workspace/crawl4ai-local-for-windows`
+- `parent_location`: Write it like `C:/dev/repo`
+- e.g. `C:/dev/repo/crawl4ai-local-for-windows`
 
 ```
 # Check MCP installation
@@ -90,12 +90,12 @@ crawl_structured(
 
 Field spec syntax:
 
-|| Spec                  | Meaning                                                      |
-|| --------------------- | ------------------------------------------------------------ |
-|| `"td"` or `"td:text"` | Text of the matched element                                  |
-|| `"a@href"`            | Attribute of a child element (`element@attribute`)           |
-|| `"@data-value"`       | Attribute of the base element itself                         |
-|| `"td:nth-of-type(1)"` | Nth element — use standard CSS (`:eq()` is **not** supported) |
+| Spec                  | Meaning                                                      |
+| --------------------- | ------------------------------------------------------------ |
+| `"td"` or `"td:text"` | Text of the matched element                                  |
+| `"a@href"`            | Attribute of a child element (`element@attribute`)           |
+| `"@data-value"`       | Attribute of the base element itself                         |
+| `"td:nth-of-type(1)"` | Nth element — use standard CSS (`:eq()` is **not** supported) |
 
 Both tools share the waiting options (see below).
 

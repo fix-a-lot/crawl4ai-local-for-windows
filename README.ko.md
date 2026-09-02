@@ -31,7 +31,7 @@ uv sync
 uv run main
 ```
 
-✅ 웰컴 메시지 확인 후 `ctrl + c`로 종료하고 에이전트에서 MCP를 추가하면 됨니다.
+✅ 웰컴 메시지 확인 후 `ctrl + c`로 종료하고 에이전트에서 MCP를 추가하면 됩니다.
 
 ```
 # 참고: 디버깅 모드(MCP Inspector)
@@ -46,8 +46,8 @@ uv run mcp dev src/crawl4ai_local_for_windows/server.py
 claude mcp add --transport stdio --scope user crawl4ai -- uv run --directory <parent_location>/crawl4ai-local-for-windows main
 ```
 
-- `parent_location`: `C:/dev/repo/fix-a-lot` 형태로 작성
-- 예: `claude mcp add --transport stdio --scope user crawl4ai -- uv run --directory C:/dev/repo/fix-a-lot/crawl4ai-local-for-windows main`
+- `parent_location`: `C:/dev/repo` 형태로 작성
+- 예: `claude mcp add --transport stdio --scope user crawl4ai -- uv run --directory C:/dev/repo/crawl4ai-local-for-windows main`
 
 ```
 # MCP 설치 확인
@@ -61,7 +61,7 @@ claude mcp get crawl4ai
 hermes mcp add crawl4ai --command "uv" --args "run" "--directory" "<parent_location>/crawl4ai-local-for-windows" "main"
 ```
 
-- `parent_location`: `C:/dev/repo/fix-a-lot` 형태로 작성
+- `parent_location`: `C:/dev/repo` 형태로 작성
 - 예: `C:/dev/repo/fix-a-lot/crawl4ai-local-for-windows`
 
 ```
@@ -90,12 +90,12 @@ crawl_structured(
 
 필드 지정 문법:
 
-|| 지정문                 | 의미                                          |
-|| --------------------- | --------------------------------------------- |
-|| `"td"` 또는 `"td:text"` | 매칭된 요소의 텍스트                             |
-|| `"a@href"`            | 자식 요소의 속성 (`요소@속성명`)                   |
-|| `"@data-value"`       | 기준 요소 자신의 속성                             |
-|| `"td:nth-of-type(1)"` | N번째 요소 — 표준 CSS 사용 (`:eq()`는 미지원) |
+| 지정문                 | 의미                                          |
+| --------------------- | --------------------------------------------- |
+| `"td"` 또는 `"td:text"` | 매칭된 요소의 텍스트                             |
+| `"a@href"`            | 자식 요소의 속성 (`요소@속성명`)                   |
+| `"@data-value"`       | 기준 요소 자신의 속성                             |
+| `"td:nth-of-type(1)"` | N번째 요소 — 표준 CSS 사용 (`:eq()`는 미지원) |
 
 두 도구 모두 대기 옵션을 공유합니다 (아래 참조).
 
