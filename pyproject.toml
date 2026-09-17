@@ -15,6 +15,11 @@ dependencies = [
 [project.scripts]
 main = "crawl4ai_local_for_windows.server:main"
 
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
 build-backend = "uv_build"

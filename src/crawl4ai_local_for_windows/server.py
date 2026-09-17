@@ -40,6 +40,12 @@ def _is_blocked_system_path(path: str) -> bool:
     판단한다 (os.path.realpath는 실행 플랫폼에 따라 Windows 드라이브
     표기를 그대로 리터럴로 취급해 비교가 깨질 수 있음).
 
+    - 먼저 ntpath.abspath로 CWD 기준 절대경로화한다. 상대경로("..\\..\\
+      Windows\\x.png")를 절대경로화 없이 normpath만 적용하면 앞쪽에
+      대응할 상위 경로가 없어 "..\\windows\\x.png" 형태로 남고, 이는
+      절대경로 형태인 차단 목록("c:\\windows")과 매칭되지 않아 실제
+      파일 쓰기 시점(CWD 기준 상대경로 resolve)에는 시스템 경로로
+      빠져나갈 수 있었다.
     - ntpath.normpath로 ".."/혼합 구분자(\\, /)를 정규화해 우회를 막는다.
     - Windows 경로는 대소문자를 구분하지 않으므로 소문자로 비교한다.
     - 정규화된 경로가 시스템 루트와 "정확히 같거나" 그 하위 디렉터리일
@@ -49,7 +55,7 @@ def _is_blocked_system_path(path: str) -> bool:
     if not path:
         return True
 
-    normalized = ntpath.normpath(path).lower()
+    normalized = ntpath.normpath(ntpath.abspath(path)).lower()
 
     for root in _WINDOWS_SYSTEM_ROOTS:
         root_normalized = ntpath.normpath(root).lower()
