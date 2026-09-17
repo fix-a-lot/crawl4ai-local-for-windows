@@ -62,7 +62,7 @@ hermes mcp add crawl4ai --command "uv" --args "run" "--directory" "<parent_locat
 ```
 
 - `parent_location`: `C:/dev/repo` 형태로 작성
-- 예: `C:/dev/repo/fix-a-lot/crawl4ai-local-for-windows`
+- 예: `C:/dev/repo/crawl4ai-local-for-windows`
 
 ```
 # MCP 설치 확인
