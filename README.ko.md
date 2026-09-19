@@ -14,7 +14,7 @@ Windows용 Crawl4ai 로컬 MCP 서버. WSL 환경 없이 Windows에서 바로 �
 ## 요구 사항
 
 - [uv](https://docs.astral.sh/uv/)
-- Python 3.14(uv로 자동 설치)
+- Python 3.14 (uv로 설치한 Python은 Windows 스마트 앱 컨트롤에 의해 차단될 수 있으니 별도로 설치할 것)
 
 ## 설치
 

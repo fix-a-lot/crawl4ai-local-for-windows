@@ -14,7 +14,7 @@ See also:
 ## Requirements
 
 - [uv](https://docs.astral.sh/uv/)
-- Python 3.14 (installed automatically via uv)
+- Python 3.14 (Python installed via uv may be blocked by Windows Smart App Control, so install it separately)
 
 ## Installation
 
