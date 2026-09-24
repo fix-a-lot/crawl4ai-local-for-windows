@@ -20,6 +20,9 @@ Windows용 Crawl4ai 로컬 MCP 서버. WSL 환경 없이 Windows에서 바로 �
 
 ```
 uv sync
+
+# Playwright용 Chromium 설치
+uv run crawl4ai-setup
 ```
 
 ## 실행

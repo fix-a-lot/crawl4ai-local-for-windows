@@ -20,6 +20,9 @@ See also:
 
 ```
 uv sync
+
+# Install Chromium for Playwright
+uv run crawl4ai-setup
 ```
 
 ## Running
