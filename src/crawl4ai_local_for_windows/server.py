@@ -5,9 +5,10 @@ import logging
 import ntpath
 import os
 
+from crawl4ai import AsyncWebCrawler, BrowserConfig, CacheMode, CrawlerRunConfig
+from crawl4ai.extraction_strategy import ExtractionStrategy, JsonCssExtractionStrategy
+from crawl4ai.models import CrawlResultContainer
 from mcp.server import MCPServer
-from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode
-from crawl4ai.extraction_strategy import JsonCssExtractionStrategy
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("crawl4ai-mcp")
@@ -101,7 +102,7 @@ async def reset_crawler() -> None:
             logger.exception("크롤러 종료 중 예외 (무시하고 재생성)")
 
 
-async def run_with_recovery(url: str, config: CrawlerRunConfig):
+async def run_with_recovery(url: str, config: CrawlerRunConfig) -> CrawlResultContainer:
     """arun을 실행하고, 브라우저 자체 붕괴로 보이면 재생성 후 재시도한다.
 
     예외로 튀는 경우와 result.success=False로 조용히 돌아오는 경우를
@@ -187,8 +188,15 @@ async def shutdown_crawler() -> None:
     await reset_crawler()
 
 
-def _build_config(wait_seconds: float, wait_selector: str, **extra) -> CrawlerRunConfig:
-    kwargs: dict = {"cache_mode": CacheMode.BYPASS, **extra}
+def _build_config(
+    wait_seconds: float,
+    wait_selector: str,
+    extraction_strategy: ExtractionStrategy | None = None,
+) -> CrawlerRunConfig:
+    kwargs: dict = {
+        "cache_mode": CacheMode.BYPASS,
+        "extraction_strategy": extraction_strategy,
+    }
     if wait_selector:
         kwargs["wait_for"] = f"css:{wait_selector}"
     elif wait_seconds > 0:
@@ -303,6 +311,11 @@ async def crawl_structured(
     return content
 
 
+def _write_bytes(path: str, data: bytes) -> None:
+    with open(path, "wb") as f:
+        f.write(data)
+
+
 @mcp.tool()
 async def crawl_screenshot(url: str, output_path: str) -> str:
     """스크린샷을 찍어 파일로 저장한다."""
@@ -335,8 +348,7 @@ async def crawl_screenshot(url: str, output_path: str) -> str:
         os.makedirs(output_dir, exist_ok=True)
 
     try:
-        with open(output_path, "wb") as f:
-            f.write(image_bytes)
+        await asyncio.to_thread(_write_bytes, output_path, image_bytes)
     except OSError as exc:
         logger.exception("스크린샷 저장 실패: %s", output_path)
         return f"파일 저장 실패: {exc}"
