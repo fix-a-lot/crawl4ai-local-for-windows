@@ -17,9 +17,25 @@ main = "crawl4ai_local_for_windows.server:main"
 
 [dependency-groups]
 dev = [
+    "anti-slop-py>=0.1.1",
+    "flake8>=7.4.1",
     "pytest>=8.0.0",
+    "ruff>=0.16.10",
 ]
 
 [build-system]
 requires = ["uv_build>=0.12.5,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.ruff.lint]
+extend-select = [
+    "ANN",    # requires annotations; ANN401 bans `Any` in parameters and returns
+    "PGH003", # bans blanket `# type: ignore`
+    "B009",   # bans getattr with a constant name
+    "B010",   # bans setattr with a constant name
+    "TID251", # banned APIs, listed below
+]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"unittest.mock.patch".msg = "Module mocking hides real seams; inject the dependency instead (anti-slop no-module-mocking)."
+"typing.Any".msg = "Any erases evidence; declare the owner type or parse at the boundary."
